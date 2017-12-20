@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+#
+# Poll the Bitfinex order book and print to console.
+#
+# Author : Scott Barr
+# Date   : 29 Mar 2014
+#
+
+import os, sys
+from datetime import datetime
+
+import okex
+
+# symbol to query the order book
+symbol = 'ltc_btc'
+
+# set the parameters to limit the number of bids or asks
+parameters = {'limit_asks': 5, 'limit_bids': 5}
+
+# create the client
+client = okex.OkexClient(None, None)
+
+while True:
+
+    # get latest ticker
+    ticker = client.ticker(symbol)
+    orders = client.trades(symbol)
+
+    # clear the display, and update values
+    os.system('clear')
+
+    print "# Okex (Last Update : %s)" % (datetime.now())
+    print "## Last Ticker"
+    print ticker
+
+    for order in orders:
+        print order
+       
