@@ -307,5 +307,5 @@ class OkexClient(OkexBaseClient):
         params = {'symbol':symbol}
         if size>0:
             params['size'] = size
-        return self._get(self.url_for(PATH_TRADES, parameters=params))
+        return self._get(self.url_for(PATH_DEPTH, parameters=params))
 
