@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import time
 import logging
+import urllib
 
 PROTOCOL = "https"
 HOST = "www.okex.com/api"
@@ -21,6 +22,7 @@ PATH_ORDER_INFO = "order_info.do"   #获取订单信息
 PATH_ORDERS_INFO = "orders_info.do"   #批量获取订单信息
 PATH_ORDER_HISTORY = "order_history.do"   #获取历史订单信息，只返回最近两天的信息
 PATH_CANCEL_ORDER = "cancel_order.do"   #撤销订单
+PATH_BALANCES_USERINFO = "userinfo.do"  #个人资产情况
 
 # HTTP request timeout in seconds
 TIMEOUT = 5.0
@@ -64,8 +66,9 @@ class OkexBaseClient(object):
 
     def _sign_payload(self, payload):
         sign = ''
-        for key in sorted(payload.keys()):
-            sign += key + '=' + str(payload[key]) +'&'
+        if payload:
+            for key in sorted(payload.keys()):
+                sign += key + '=' + str(payload[key]) +'&'
         data = sign+'secret_key='+self.SECRET
         return hashlib.md5(data.encode("utf8")).hexdigest().upper()
 
@@ -84,11 +87,19 @@ class OkexBaseClient(object):
         return req.json()
 
     def _post(self, url, params=None, needsign=True, headers=None, timeout=TIMEOUT):
+        req_params = {'api_key' : self.KEY}
         if params and needsign:
-            params['sign'] = self._sign_payload(params)
-        params['api_key'] = self.KEY
+            req_params.update(params)
+        req_params['sign'] = self._sign_payload(req_params)
+        
+        req_headers = {
+            "Content-type" : "application/x-www-form-urlencoded",
+        }
+        if headers:
+            req_headers.update(headers)
+        print req_headers, params
 
-        req = requests.post(url, headers=headers, data=params, timeout=TIMEOUT)
+        req = requests.post(url, headers=req_headers, data=urllib.urlencode(req_params), timeout=TIMEOUT)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
         return req.json()
@@ -232,7 +243,39 @@ class OkexTradeClient(OkexBaseClient):
         result = self._post(self.url_for(PATH_ORDER_HISTORY), params=payload)
         if result['result']:
             return result
-        raise OkexClientError('Failed to get history order:%s %s' % (symbol, order_id))
+        raise OkexClientError('Failed to get history order:%s %s' % (symbol, result))
+
+    def balances(self):
+        '''
+        # Request
+        POST https://www.okex.com/api/v1/userinfo.do
+        # Response
+        {
+            "info": {
+                "funds": {
+                    "free": {
+                        "btc": "0",
+                        "usd": "0",
+                        "ltc": "0",
+                        "eth": "0"
+                    },
+                    "freezed": {
+                        "btc": "0",
+                        "usd": "0",
+                        "ltc": "0",
+                        "eth": "0"
+                    }
+                }
+            },
+            "result": true
+        }
+        '''
+        payload = {
+        }
+        result = self._post(self.url_for(PATH_BALANCES_USERINFO), params=payload)
+        if result['result']:
+            return result
+        raise OkexClientError('Failed to get balances userinfo order:%s' % result)
 
 
 class OkexClient(OkexBaseClient):
