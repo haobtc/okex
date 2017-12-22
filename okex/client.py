@@ -67,9 +67,8 @@ class OkexBaseClient(object):
 
     def _sign_payload(self, payload):
         sign = ''
-        if payload:
-            for key in sorted(payload.keys()):
-                sign += key + '=' + str(payload[key]) +'&'
+        for key in sorted(payload.keys()):
+            sign += key + '=' + str(payload[key]) +'&'
         data = sign+'secret_key='+self.SECRET
         return hashlib.md5(data.encode("utf8")).hexdigest().upper()
 
@@ -102,9 +101,9 @@ class OkexBaseClient(object):
         }
         if headers:
             req_headers.update(headers)
-        print req_headers, params
+        logging.info("%s %s", req_headers, req_params)
 
-        req = requests.post(url, headers=req_headers, data=urllib.urlencode(req_params), timeout=TIMEOUT)
+        req = requests.post(url, headers=req_headers, data=req_params, timeout=TIMEOUT)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
         try:
@@ -126,6 +125,8 @@ class OkexTradeClient(OkexBaseClient):
         # Response
         {"result":true,"order_id":123456}
         """
+        assert(isinstance(amount, str) && isinstance(price, str))
+
         if ord_type not in ('buy', 'sell', 'buy_market', 'sell_market'):
             #买卖类型： 限价单（buy/sell） 市价单（buy_market/sell_market）
             raise OkexClientError("Invaild order type")
@@ -134,7 +135,7 @@ class OkexTradeClient(OkexBaseClient):
             "symbol": symbol, "amount": amount, "price": price, "type": ord_type
         }
         result = self._post(self.url_for(PATH_TRADE), params=payload)
-        if result['result'] and result['order_id']:
+        if 'error_code' not in result and result['result'] and result['order_id']:
             return result
         raise OkexClientError('Failed to place order:'+str(result))
 
@@ -246,7 +247,7 @@ class OkexTradeClient(OkexBaseClient):
         payload = {
             "symbol": symbol,
             "status": status,
-            "current_page": current_page,
+            "current_page": cur_page,
             "page_length": page_length,
         }
         result = self._post(self.url_for(PATH_ORDER_HISTORY), params=payload)
