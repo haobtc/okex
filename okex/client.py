@@ -23,6 +23,7 @@ PATH_ORDERS_INFO = "orders_info.do"   #批量获取订单信息
 PATH_ORDER_HISTORY = "order_history.do"   #获取历史订单信息，只返回最近两天的信息
 PATH_CANCEL_ORDER = "cancel_order.do"   #撤销订单
 PATH_BALANCES_USERINFO = "userinfo.do"  #个人资产情况
+PATH_TRADE = "trade.do"    #获取币币交易信息
 
 # HTTP request timeout in seconds
 TIMEOUT = 5.0
@@ -132,7 +133,7 @@ class OkexTradeClient(OkexBaseClient):
         payload = {
             "symbol": symbol, "amount": amount, "price": price, "type": ord_type
         }
-        result = self._post(self.url_for(PATH_TRADES), params=payload)
+        result = self._post(self.url_for(PATH_TRADE), params=payload)
         if result['result'] and result['order_id']:
             return result
         raise OkexClientError('Failed to place order:'+str(result))

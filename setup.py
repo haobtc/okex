@@ -5,7 +5,7 @@ dependencies = [
     'requests',
 ]
 
-version = '0.0.1'
+version = '1.0.2'
 
 setup(name='okex',
     version=version,
