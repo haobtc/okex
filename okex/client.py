@@ -84,7 +84,11 @@ class OkexBaseClient(object):
         req = requests.get(url, timeout=timeout)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
-        return req.json()
+        try:
+            return req.json()
+        except Exception as e:
+            logging.exception('Failed to GET:%s result:%s', url, req.text)
+            raise e
 
     def _post(self, url, params=None, needsign=True, headers=None, timeout=TIMEOUT):
         req_params = {'api_key' : self.KEY}
@@ -102,7 +106,11 @@ class OkexBaseClient(object):
         req = requests.post(url, headers=req_headers, data=urllib.urlencode(req_params), timeout=TIMEOUT)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
-        return req.json()
+        try:
+            return req.json()
+        except Exception as e:
+            logging.exception('Failed to POST:%s result:%s', url, req.text)
+            raise e
 
 
 class OkexTradeClient(OkexBaseClient):
