@@ -23,9 +23,11 @@ PATH_ORDERS_INFO = "orders_info.do"   #批量获取订单信息
 PATH_ORDER_HISTORY = "order_history.do"   #获取历史订单信息，只返回最近两天的信息
 PATH_CANCEL_ORDER = "cancel_order.do"   #撤销订单
 PATH_BALANCES_USERINFO = "userinfo.do"  #个人资产情况
+PATH_TRADE = "trade.do"    #获取币币交易信息
 
 # HTTP request timeout in seconds
-TIMEOUT = 15.0
+TIMEOUT = 10.0
+
 
 class OkexClientError(Exception):
     pass
@@ -67,9 +69,8 @@ class OkexBaseClient(object):
 
     def _sign_payload(self, payload):
         sign = ''
-        if payload:
-            for key in sorted(payload.keys()):
-                sign += key + '=' + str(payload[key]) +'&'
+        for key in sorted(payload.keys()):
+            sign += key + '=' + str(payload[key]) +'&'
         data = sign+'secret_key='+self.SECRET
         return hashlib.md5(data.encode("utf8")).hexdigest().upper()
 
@@ -85,7 +86,11 @@ class OkexBaseClient(object):
         req = requests.get(url, timeout=timeout, proxies=self.PROXIES)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
-        return req.json()
+        try:
+            return req.json()
+        except Exception as e:
+            logging.exception('Failed to GET:%s result:%s', url, req.text)
+            raise e
 
     def _post(self, url, params=None, needsign=True, headers=None, timeout=TIMEOUT):
         req_params = {'api_key' : self.KEY}
@@ -98,12 +103,16 @@ class OkexBaseClient(object):
         }
         if headers:
             req_headers.update(headers)
-        print req_headers, params
+        logging.info("%s %s", req_headers, req_params)
 
         req = requests.post(url, headers=req_headers, data=urllib.urlencode(req_params), timeout=TIMEOUT, proxies=self.PROXIES)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
-        return req.json()
+        try:
+            return req.json()
+        except Exception as e:
+            logging.exception('Failed to POST:%s result:%s', url, req.text)
+            raise e
 
 
 class OkexTradeClient(OkexBaseClient):
@@ -118,6 +127,8 @@ class OkexTradeClient(OkexBaseClient):
         # Response
         {"result":true,"order_id":123456}
         """
+        assert(isinstance(amount, str) && isinstance(price, str))
+
         if ord_type not in ('buy', 'sell', 'buy_market', 'sell_market'):
             #买卖类型： 限价单（buy/sell） 市价单（buy_market/sell_market）
             raise OkexClientError("Invaild order type")
@@ -125,8 +136,8 @@ class OkexTradeClient(OkexBaseClient):
         payload = {
             "symbol": symbol, "amount": amount, "price": price, "type": ord_type
         }
-        result = self._post(self.url_for(PATH_TRADES), params=payload)
-        if result['result'] and result['order_id']:
+        result = self._post(self.url_for(PATH_TRADE), params=payload)
+        if 'error_code' not in result and result['result'] and result['order_id']:
             return result
         raise OkexClientError('Failed to place order:'+str(result))
 
@@ -238,7 +249,7 @@ class OkexTradeClient(OkexBaseClient):
         payload = {
             "symbol": symbol,
             "status": status,
-            "current_page": current_page,
+            "current_page": cur_page,
             "page_length": page_length,
         }
         result = self._post(self.url_for(PATH_ORDER_HISTORY), params=payload)
