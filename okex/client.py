@@ -26,17 +26,18 @@ PATH_BALANCES_USERINFO = "userinfo.do"  #个人资产情况
 PATH_TRADE = "trade.do"    #获取币币交易信息
 
 # HTTP request timeout in seconds
-TIMEOUT = 5.0
+TIMEOUT = 10.0
 
 class OkexClientError(Exception):
     pass
 
 
 class OkexBaseClient(object):
-    def __init__(self, key, secret):
+    def __init__(self, key, secret, proxies=None):
         self.URL = "{0:s}://{1:s}/{2:s}".format(PROTOCOL, HOST, VERSION)
         self.KEY = key
         self.SECRET = secret
+        self.PROXIES = proxies
 
     @property
     def _nonce(self):
@@ -81,7 +82,7 @@ class OkexBaseClient(object):
         return data
 
     def _get(self, url, timeout=TIMEOUT):
-        req = requests.get(url, timeout=timeout)
+        req = requests.get(url, timeout=timeout, proxies=self.PROXIES)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
         try:
@@ -103,7 +104,7 @@ class OkexBaseClient(object):
             req_headers.update(headers)
         logging.info("%s %s", req_headers, req_params)
 
-        req = requests.post(url, headers=req_headers, data=req_params, timeout=TIMEOUT)
+        req = requests.post(url, headers=req_headers, data=urllib.urlencode(req_params), timeout=TIMEOUT, proxies=self.PROXIES)
         if req.status_code/100 != 2:
             logging.error(u"Failed to request:%s %d headers:%s", url, req.status_code, req.headers)
         try:
