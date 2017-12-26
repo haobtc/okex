@@ -127,7 +127,7 @@ class OkexTradeClient(OkexBaseClient):
         # Response
         {"result":true,"order_id":123456}
         """
-        assert(isinstance(amount, str) && isinstance(price, str))
+        assert(isinstance(amount, str) and isinstance(price, str))
 
         if ord_type not in ('buy', 'sell', 'buy_market', 'sell_market'):
             #买卖类型： 限价单（buy/sell） 市价单（buy_market/sell_market）
