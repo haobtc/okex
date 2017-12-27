@@ -15,3 +15,5 @@ print client.depth(symbol)
 
 authClient = OkexTradeClient('', '', proxies=proxies)
 print authClient.balances()
+
+print authClient.history('bcc_btc', 1, 500)

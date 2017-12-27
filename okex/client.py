@@ -215,7 +215,7 @@ class OkexTradeClient(OkexBaseClient):
         """
         return self.status_order(symbol, -1)
 
-    def history(self, symbol, status, offset=0, limit=500):
+    def history(self, symbol, status, limit=500):
         """
         # Request
         POST https://www.okex.com/api/v1/order_history.do
@@ -243,19 +243,23 @@ class OkexTradeClient(OkexBaseClient):
         status:-1:已撤销   0:未成交 1:部分成交 2:完全成交 4:撤单处理中
         type:buy_market:市价买入 / sell_market:市价卖出
         """
-        page_length = 200
-        cur_page = int(offset / page_length) + 1
-
-        payload = {
-            "symbol": symbol,
-            "status": status,
-            "current_page": cur_page,
-            "page_length": page_length,
-        }
-        result = self._post(self.url_for(PATH_ORDER_HISTORY), params=payload)
-        if result['result']:
-            return result
-        raise OkexClientError('Failed to get history order:%s %s' % (symbol, result))
+        PAGE_LENGTH = 200 # Okex限制 每页数据条数，最多不超过200
+        final_result = []
+        for page_index in range(int(limit/PAGE_LENGTH)+1):
+            payload = {
+                "symbol": symbol,
+                "status": status,
+                "current_page": page_index,
+                "page_length": PAGE_LENGTH,
+            }
+            result = self._post(self.url_for(PATH_ORDER_HISTORY), params=payload)
+            if not result['result']:
+                raise OkexClientError('Failed to get history order:%s %s' % (symbol, result))
+            if len(result['orders'])>0:
+                final_result.extend(result['orders'])
+            else:
+                break
+        return final_result
 
     def balances(self):
         '''
